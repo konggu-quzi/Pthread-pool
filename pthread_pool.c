@@ -14,13 +14,14 @@ void *get_task(void *arg)
 		pthread_mutex_lock(&pool->lock); 	//上锁(上不了锁就阻塞)
 		if(pool->wait_tasks == 0 && pool->shutdowan_flag == 0)
 		{
-			//printf("*******堵塞******\n");// printf("*******任务队列中任务的个数:%d******\n",pool->wait_tasks);
+			// printf("*******堵塞******\n");
+			// printf("*******任务队列中任务的个数:%d******\n",pool->wait_tasks);
 			pthread_cond_wait(&pool->cond,&pool->lock);	//进入条件变量等待队列
 			pthread_mutex_unlock(&pool->lock);	//解锁
 		}	
 		else if(pool->shutdowan_flag != 1)
 		{	
-			//printf("*******运行******\n");
+			// printf("*******运行******\n");
 			my_task_p = pool->task_list->next;		
 			pool->task_list->next = my_task_p->next;		
 			my_task_p->next = NULL;
@@ -40,7 +41,8 @@ void *get_task(void *arg)
 		if(old_active_pthreads != pool->active_pthreads)
 		{
 			
-			old_active_pthreads--;//printf("我被选中删除了,old_active_pthreads:%d\n",old_active_pthreads);
+			old_active_pthreads--;
+			// printf("我被选中删除了,old_active_pthreads:%d\n",old_active_pthreads);
 			pthread_mutex_unlock(&pool->lock);	//解锁
 			pthread_exit(NULL);//"我被选中删除了");
 		}
@@ -110,8 +112,9 @@ u8 add_task(struct pthread_pool *pool,void *(*new_function)(void *arg),void *new
 		cur = cur->next;
 
 	cur->next = new;
-	pthread_mutex_unlock(&pool->lock);	//解锁
+	
 	pthread_cond_signal(&pool->cond);//while(1);
+	pthread_mutex_unlock(&pool->lock);	//解锁
 	//printf("添加任务成功，当前任务数量:%d\n",pool->wait_tasks);	
 	return 1;
 }
@@ -147,7 +150,7 @@ u32 add_pthread(struct pthread_pool *pool,u32 add_num)
 	free(old_tid);
 	pool->active_pthreads += add_num;
 	old_active_pthreads = pool->active_pthreads;
-	// printf("*******添加%d个活跃线程成功******\n",add_num);
+	printf("*******添加%d个活跃线程成功******\n",add_num);
 	pthread_mutex_unlock(&pool->lock);	//解锁
 	return add_num;	
 }
@@ -201,16 +204,16 @@ u32 remove_pthread(struct pthread_pool *pool,u32 remove_num)
 
 u8 destroy_pthread_pool(struct pthread_pool *pool)
 {	
-	
+	// printf("*******销毁线程池../.******\n");
 	pool->shutdowan_flag = 1;
 	pthread_cond_broadcast(&pool->cond);
-	
+	// printf("wait_tasks--:[%d]\n",pool->wait_tasks);
 	while(pool->active_pthreads--)
 	{
 		// void *exit_buf;
 		//printf("active_pthreads:%d\n",pool->active_pthreads);
 		pthread_join(*(pool->thread_tid + pool->active_pthreads),NULL);//&exit_buf);
-		//printf(" %ld 线程已经退出了！\n",*(pool->thread_tid + pool->active_pthreads));		
+		// printf(" %ld 线程已经退出了！\n",*(pool->thread_tid + pool->active_pthreads));		
 	}
 	
 	pthread_mutex_destroy(&pool->lock);

@@ -122,11 +122,13 @@ int main(int argc, char **argv)
 		copy_dir(path,pool);
 	}
 	/********复制完成标志********/
-	// while(_dir_info->reg_nums != 0)
-	// gettimeofday(&tv,NULL);end = tv.tv_sec;		
+	// while(1);
+	while(pool->wait_tasks != 0);
+			
 	destroy_pthread_pool(pool);
-		
-	system("clear");
+	gettimeofday(&tv,NULL);end = tv.tv_sec;
+
+	// system("clear");
 	printf("\n\n\n\n\n\n\n\n");
 	printf("\t----------------------------------------\n");
 	printf("\t|             Copy finish!             |\n");
@@ -140,18 +142,24 @@ int main(int argc, char **argv)
 	printf("\t|    类型    |   数量   |     大小     |\n");
 	printf("\t----------------------------------------\n");
 	printf("\t|  普通文件  |   %4ld   |   %7.1lf MB |\n"
-		,old_dir_info.reg_nums,((double)old_dir_info.reg_filesize)/1024/1024-0.1);
+		,old_dir_info.reg_nums,(double)(old_dir_info.reg_filesize/1024)/1024);
 	printf("\t|  其他文件  |   %4ld   |   %7.1lf MB |\n"
-		,old_dir_info.other_nums,((double)old_dir_info.other_filesize)/1024/1024);
+		,old_dir_info.other_nums,(double)(old_dir_info.other_filesize/1024)/1024);
 	printf("\t----------------------------------------\n");printf("\n\t");//██	
 	u8 finish_percent,finish_percent_copy;
-	finish_percent = finish_percent_copy = 100*((double)old_dir_info.reg_filesize - (double)_dir_info->reg_filesize) / (double)old_dir_info.reg_filesize;
+	finish_percent = finish_percent_copy = 100*(double)((old_dir_info.reg_filesize - _dir_info->reg_filesize) / old_dir_info.reg_filesize);
+	// if(_dir_info->reg_filesize == 0) finish_percent_copy = 100;
 	while(finish_percent_copy--){printf("■");}
 	printf(" <%d%%>\n",finish_percent);
 	printf("\n\t打开失败文件数: %ld\t创建失败文件数: %ld\n",fd_from_nums,fd_to_nums);		
 	printf("\n\t创建失败文件夹数: %ld\n",dir_error_nums);
 	printf("\n\t复制失败文件: %s\n",errno_buf);
+
+	// printf("\n\t***[%ld]   [%ld]   \n",_dir_info->reg_filesize,old_dir_info.reg_filesize);
 	printf("\n\t花费时间:%2ld分%2ld秒\n\n\n\n\n\n",(end-start)/60,(end-start)%60);
+
+
+
 
 }
 

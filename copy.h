@@ -27,6 +27,8 @@ extern u64 fd_from_nums,fd_to_nums,dir_error_nums;
 extern u8 finish_percent,finish_percent_copy;
 extern struct timeval tv;
 extern u8 errno_buf[4096];
+u8 nums = 0;
+
 
 void calculate_file_size(u8 src_buf[4096],struct dir_info *_dir_info)
 {	
@@ -94,23 +96,29 @@ void calculate_file_size(u8 src_buf[4096],struct dir_info *_dir_info)
 
 void *copy_file(void *arg)
 {
+	// pthread_mutex_lock(&pool->lock); 	//上锁(上不了锁就阻塞)
 	struct path_struct *file_path =(struct path_struct *)arg;
-	
+
 	struct stat info;	stat(file_path->src_buf,&info);	
-	
+
 	int fd_from = open(file_path->src_buf,O_RDONLY);
-	if(fd_from == -1 )
+	if(fd_from == -1)
 	{
 		fd_from_nums++;_dir_info->reg_nums--;strcpy(errno_buf,file_path->src_buf);
+		printf("***1\n");
+		while(1);
 		return NULL;
 	}
 	int fd_to = open(file_path->dest_buf,O_RDWR|O_CREAT|O_TRUNC,info.st_mode);
-	if(fd_to == -1 )
+	if(fd_to == -1)
 	{
 		fd_to_nums++;_dir_info->reg_nums--;strcpy(errno_buf,file_path->dest_buf);
+		printf("***2\n");
+		while(1);
 		return NULL;
 	}		
-	pthread_mutex_lock(&pool->lock); 	//上锁(上不了锁就阻塞)
+
+	
 	strcpy(_dir_info->name,file_path->src_buf);
 	
 	system("clear");
@@ -126,6 +134,7 @@ void *copy_file(void *arg)
 	printf("\n\t打开失败文件数: %ld\t创建失败文件数: %ld\n",fd_from_nums,fd_to_nums);		
 	printf("\n\t创建失败文件夹数: %ld\n",dir_error_nums);		
 	printf("\n\n");
+
 	char buf[4096];
 	int nread,nwrite;
 	
@@ -142,9 +151,11 @@ void *copy_file(void *arg)
 	_dir_info->reg_filesize -= info.st_size;	
 	close(fd_to);
 	close(fd_from);	
-	pthread_mutex_unlock(&pool->lock);	//解锁
-	// printf("file_path:[%s]          剩余项目：[%ld]\n",file_path->src_buf,_dir_info->reg_nums--);
 	
+	// printf("file_path:[%s]          剩余项目：[%ld]\n",file_path->src_buf,_dir_info->reg_nums);
+
+	// printf("\t***:[%ld]   [%ld]   \n",_dir_info->reg_filesize,old_dir_info.reg_filesize);
+	// pthread_mutex_unlock(&pool->lock);	//解锁
 	return NULL;
 }
 
@@ -179,14 +190,18 @@ int copy_dir(struct path_struct *_path,struct pthread_pool *pool)
 		
 		if(S_ISREG(tmpstat.st_mode))
 		{	
+			// printf("--->src_buf:[%s]   len:[%ld]   d_name:[%s]   len:[%ld]\n--->dest_buf:[%s]   len:[%ld]\n",new_path->src_buf,strlen(new_path->src_buf),dirent_p->d_name,strlen(dirent_p->d_name),new_path->dest_buf,strlen(new_path->dest_buf));	
+			// printf("d_name:[%s]\n",dirent_p->d_name);
 			//把复制的任务丢到任务链表
 			if(add_task(pool,copy_file,new_path) == 0){
 				add_pthread(pool, 1);
+				// printf("----------------------add_pthread\n");	
 				while(add_task(pool,copy_file,new_path) == 0){
 					sleep(1);
 				}
-			}		
-		}
+			}
+	
+		}	
 		else if( S_ISDIR(tmpstat.st_mode) )
 		{
 			copy_dir(new_path,pool);			
